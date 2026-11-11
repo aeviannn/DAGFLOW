@@ -20,6 +20,7 @@ inline std::vector<TaskSpec> simultaneousAndZeroDuration() {
 }
 
 struct WorkflowPreset {
+    std::string id;
     std::string name;
     std::vector<TaskSpec> tasks;
 };
@@ -41,11 +42,11 @@ inline std::vector<TaskSpec> softwareBuildPipeline() {
 
 inline std::vector<WorkflowPreset> presets() {
     return {
-        {"Empty workflow", {}},
-        {"Simple dependency chain", chain()},
-        {"Fork-and-join workflow", forkAndJoin()},
-        {"Simultaneous completion", simultaneousAndZeroDuration()},
-        {"Software build pipeline", softwareBuildPipeline()}
+        {"empty", "Empty workflow", {}},
+        {"chain", "Simple dependency chain", chain()},
+        {"fork-join", "Fork-and-join workflow", forkAndJoin()},
+        {"simultaneous", "Simultaneous completion", simultaneousAndZeroDuration()},
+        {"software-build-pipeline", "Software build pipeline", softwareBuildPipeline()}
     };
 }
 

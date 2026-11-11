@@ -59,6 +59,8 @@ add_test(NAME metrics_tests COMMAND metrics_tests)
 
 add_library(dagflow_console
     app/cli.cpp
+    app/command_line.cpp
+    app/json_writer.cpp
     app/report.cpp
 )
 target_include_directories(dagflow_console PUBLIC app examples)
@@ -85,3 +87,12 @@ else()
     target_compile_options(cli_tests PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 add_test(NAME cli_tests COMMAND cli_tests)
+
+add_executable(json_cli_tests tests/json_cli_tests.cpp)
+target_link_libraries(json_cli_tests PRIVATE dagflow_console)
+if(MSVC)
+    target_compile_options(json_cli_tests PRIVATE /W4)
+else()
+    target_compile_options(json_cli_tests PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+add_test(NAME json_cli_tests COMMAND json_cli_tests)

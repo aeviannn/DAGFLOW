@@ -1,0 +1,11 @@
+{
+  "name": "dagflow-desktop-ui",
+  "private": true,
+  "workspaces": ["frontend", "backend"],
+  "scripts": {
+    "dev:ui": "npm run dev --workspace @dagflow/frontend",
+    "dev:api": "npm run dev --workspace @dagflow/backend",
+    "build": "npm run build --workspace @dagflow/frontend",
+    "test:api": "npm test --workspace @dagflow/backend"
+  }
+}

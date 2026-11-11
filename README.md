@@ -118,3 +118,32 @@ Run each generated test executable (`graph_tests.exe`, `scheduler_tests.exe`, `s
 - Gantt intervals are drawn on a compact fixed-width scale, so very short tasks may occupy a single visual column. Exact intervals are printed beneath each worker row.
 - Speedup is undefined and displayed as N/A when the measured makespan is zero or when the selected comparison worker count is one.
 - The console app is text-only; it does not provide a graphical interface or export reports.
+
+## Local desktop-style web interface
+
+The React interface visualizes completed schedules returned by the existing C++17 executable. A small Node.js/Express bridge validates requests and launches that executable with its JSON CLI; JavaScript does not implement scheduling or recalculate metrics.
+
+Requirements: Node.js 24 or compatible, npm, and a built `build/dagflow.exe`. Install frontend packages from the repository root:
+
+```powershell
+npm.cmd install
+```
+
+Start the API bridge and Vite development server in separate PowerShell terminals:
+
+```powershell
+npm.cmd run dev:api
+npm.cmd run dev:ui
+```
+
+Open `http://127.0.0.1:5173`. Vite proxies `/api` to Express on `127.0.0.1:4174`. The bridge defaults to `build/dagflow.exe`; set `DAGFLOW_ENGINE_PATH` before starting the bridge if your executable is elsewhere. The API binds only to loopback. For a production-style local preview, run `npm.cmd run build` and then `npm.cmd run dev:api`; Express serves `frontend/dist` and the API from port 4174.
+
+API routes are `GET /api/health`, `GET /api/workflows`, `POST /api/simulate`, and `POST /api/compare`. Simulation requests contain `workflow`, `workers`, and `policy`; comparison requests contain `workflow` and `workers`. Workflow IDs are fetched from the C++ catalog. The Gantt chart and dependency graph use the engine's returned task and execution records.
+
+Run the Node bridge integration tests against the built C++ executable with:
+
+```powershell
+npm.cmd run test:api
+```
+
+These tests exercise the local HTTP API and therefore need permission to bind and connect to a loopback port in restricted shells.
