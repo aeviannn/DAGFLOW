@@ -18,8 +18,8 @@ Implement the following with documented purpose and time/space complexity, inclu
 | Algorithm | Purpose | Expected complexity |
 | --- | --- | --- |
 | Adjacency-list DAG representation | Store task dependencies and successor edges efficiently. | `O(V + E)` storage; edge traversal `O(V + E)`. |
-| Cycle detection | Reject cyclic dependencies before scheduling. | `O(V + E)` time, `O(V)` auxiliary space. |
-| Kahn topological sort | Produce a valid dependency-respecting task order and detect cycles when not all vertices are emitted. | `O(V + E)` time, `O(V)` auxiliary space. |
+| Cycle detection | Reject cyclic dependencies before scheduling. | `O((V + E) log V)` time when using the deterministic min-priority-queue Kahn implementation, `O(V)` auxiliary space. |
+| Kahn topological sort | Produce a valid dependency-respecting task order and detect cycles when not all vertices are emitted. | `O((V + E) log V)` time with a min-priority queue ordered by task ID, `O(V)` auxiliary space. |
 | Critical path / bottom-level calculation | Compute each task's duration plus the longest successor path for priority decisions. | `O(V + E)` time after topological sorting, `O(V)` auxiliary space. |
 | FCFS scheduler | Select ready tasks in first-come/ready order. | Document the implementation's queue/selection costs; target `O((V + E) log V)` or better overall. |
 | SJF scheduler | Select the ready task with the shortest duration. | Document priority-queue costs; target `O((V + E) log V)` or better overall. |
