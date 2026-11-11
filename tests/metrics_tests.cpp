@@ -108,7 +108,7 @@ void testBusyTimeOverflow() {
     const auto largest = std::numeric_limits<dagflow::Time>::max();
     const dagflow::SimulationResult result{
         {{1, 0, 0, largest}, {2, 1, 0, largest}},
-        largest, 2, dagflow::SchedulingPolicy::FCFS, 2};
+        largest, 2, dagflow::SchedulingPolicy::FCFS, 2, {}};
     checkThrows<std::overflow_error>([&] {
         (void)dagflow::MetricsCalculator::calculate(result);
     }, "busy-time sum detects signed integer overflow");
@@ -116,25 +116,25 @@ void testBusyTimeOverflow() {
 
 void testInvalidResults() {
     dagflow::SimulationResult mismatch{{{1, 0, 0, 2}}, 2, 0,
-                                       dagflow::SchedulingPolicy::FCFS, 1};
+                                       dagflow::SchedulingPolicy::FCFS, 1, {}};
     checkThrows<std::invalid_argument>([&] {
         (void)dagflow::MetricsCalculator::calculate(mismatch);
     }, "completed-count mismatch is rejected");
 
     dagflow::SimulationResult invalidWorker{{{1, 2, 0, 1}}, 1, 1,
-                                            dagflow::SchedulingPolicy::FCFS, 1};
+                                            dagflow::SchedulingPolicy::FCFS, 1, {}};
     checkThrows<std::invalid_argument>([&] {
         (void)dagflow::MetricsCalculator::calculate(invalidWorker);
     }, "out-of-range worker ID is rejected");
 
     dagflow::SimulationResult overlap{{{1, 0, 0, 3}, {2, 0, 2, 4}}, 4, 2,
-                                       dagflow::SchedulingPolicy::FCFS, 1};
+                                       dagflow::SchedulingPolicy::FCFS, 1, {}};
     checkThrows<std::invalid_argument>([&] {
         (void)dagflow::MetricsCalculator::calculate(overlap);
     }, "overlapping executions on one worker are rejected");
 
     dagflow::SimulationResult badMakespan{{{1, 0, 0, 3}}, 4, 1,
-                                          dagflow::SchedulingPolicy::FCFS, 1};
+                                          dagflow::SchedulingPolicy::FCFS, 1, {}};
     checkThrows<std::invalid_argument>([&] {
         (void)dagflow::MetricsCalculator::calculate(badMakespan);
     }, "inconsistent makespan is rejected");
@@ -151,6 +151,24 @@ void testSpeedupValidation() {
     checkThrows<std::invalid_argument>([&] {
         (void)dagflow::MetricsCalculator::speedup(baseline, differentTasks);
     }, "speedup rejects mismatched task sets");
+
+    const auto differentDurations = simulate({{1, 3, {}}}, dagflow::SchedulingPolicy::FCFS, 2);
+    checkThrows<std::invalid_argument>([&] {
+        (void)dagflow::MetricsCalculator::speedup(baseline, differentDurations);
+    }, "speedup rejects different task durations");
+
+    const std::vector<dagflow::TaskSpec> noEdges{{1, 1, {}}, {2, 1, {}}};
+    const std::vector<dagflow::TaskSpec> withEdge{{1, 1, {}}, {2, 1, {1}}};
+    const auto independent = simulate(noEdges, dagflow::SchedulingPolicy::FCFS, 1);
+    const auto dependent = simulate(withEdge, dagflow::SchedulingPolicy::FCFS, 2);
+    checkThrows<std::invalid_argument>([&] {
+        (void)dagflow::MetricsCalculator::speedup(independent, dependent);
+    }, "speedup rejects different dependency edges");
+
+    const auto emptyBaseline = simulate({}, dagflow::SchedulingPolicy::FCFS, 1);
+    const auto emptyMulti = simulate({}, dagflow::SchedulingPolicy::FCFS, 2);
+    check(!dagflow::MetricsCalculator::speedup(emptyBaseline, emptyMulti).has_value(),
+          "identical empty workflows with different worker counts are safely compared");
 }
 
 } // namespace

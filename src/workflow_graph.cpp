@@ -1,5 +1,6 @@
 #include "dagflow/workflow_graph.hpp"
 
+#include <algorithm>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -87,6 +88,27 @@ TaskIndex WorkflowGraph::indexOf(TaskId id) const {
         throw std::invalid_argument("Unknown task ID: " + std::to_string(id));
     }
     return found->second;
+}
+
+WorkflowSignature WorkflowGraph::signature() const {
+    WorkflowSignature result;
+    result.tasks.reserve(tasks_.size());
+    for (const Task& taskValue : tasks_) {
+        result.tasks.push_back(WorkflowTaskIdentity{taskValue.id, taskValue.duration, {}});
+    }
+    for (TaskIndex prerequisite = 0; prerequisite < successors_.size(); ++prerequisite) {
+        for (const TaskIndex dependent : successors_[prerequisite]) {
+            result.tasks[dependent].dependencies.push_back(tasks_[prerequisite].id);
+        }
+    }
+    for (WorkflowTaskIdentity& taskValue : result.tasks) {
+        std::sort(taskValue.dependencies.begin(), taskValue.dependencies.end());
+    }
+    std::sort(result.tasks.begin(), result.tasks.end(),
+              [](const WorkflowTaskIdentity& left, const WorkflowTaskIdentity& right) {
+                  return left.id < right.id;
+              });
+    return result;
 }
 
 } // namespace dagflow

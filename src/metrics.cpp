@@ -100,6 +100,9 @@ std::optional<double> MetricsCalculator::speedup(
     if (singleWorkerBaseline.policy != multiWorkerResult.policy) {
         throw std::invalid_argument("Speedup runs must use the same scheduling policy");
     }
+    if (singleWorkerBaseline.workflowSignature != multiWorkerResult.workflowSignature) {
+        throw std::invalid_argument("Speedup runs must use the same workflow");
+    }
     if (baselineTasks != parallelTasks) {
         throw std::invalid_argument("Speedup runs must contain the same task IDs and durations");
     }

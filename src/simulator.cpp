@@ -54,7 +54,7 @@ SimulationResult Simulator::run(const WorkflowGraph& graph,
     }
 
     auto readyQueue = makeReadyQueue(policy, graph, analysis);
-    SimulationResult result{{}, 0, 0, policy, workerCount};
+    SimulationResult result{{}, 0, 0, policy, workerCount, graph.signature()};
     result.executions.reserve(graph.size());
 
     const std::size_t taskCount = graph.size();

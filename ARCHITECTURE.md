@@ -18,6 +18,16 @@ struct TaskSpec {
     Time duration;
     std::vector<TaskId> dependencies; // predecessor task IDs
 };
+
+struct WorkflowTaskIdentity {
+    TaskId id;
+    Time duration;
+    std::vector<TaskId> dependencies;
+};
+
+struct WorkflowSignature {
+    std::vector<WorkflowTaskIdentity> tasks; // sorted by ID; dependencies sorted by ID
+};
 ```
 
 Durations must be nonnegative. Task IDs must be unique; every dependency must name an existing task; duplicate dependency edges are rejected. A self-dependency is reported as a cycle. Invalid input raises `std::invalid_argument`; detected cycles raise a dedicated `CycleError` derived from `std::runtime_error`; arithmetic overflow raises `std::overflow_error`. Nothing is silently dropped or partially accepted.
@@ -59,12 +69,15 @@ public:
     const std::vector<TaskIndex>& successors(TaskIndex index) const;
     std::size_t indegree(TaskIndex index) const;
     TaskIndex indexOf(TaskId id) const; // throws invalid_argument if absent
+    WorkflowSignature signature() const; // canonical task IDs, durations and predecessor IDs
 };
 ```
 
 The graph owns its vectors and lookup. `fromSpecs` validates IDs, durations, and dependency references before returning a graph. The parser, if one is added, owns parsing and syntax errors and passes validated-shaped `TaskSpec` records to this factory; it does not own or mutate the graph.
 
 Graph construction and storage target expected `O(V + E)` time and `O(V + E)` space using an ID lookup. If an implementation sorts input records or edges, document the additional sorting cost. Successor iteration order has no semantic effect; newly-ready tasks are sorted before scheduler insertion.
+
+`WorkflowSignature` stores exact task records sorted by task ID, each containing its duration and sorted predecessor task IDs. Equality compares the full vectors, not a hash. Building a signature costs `O(V log V + E log V)` time in the current implementation and `O(V + E)` returned storage.
 
 ### Graph analysis (`graph_analysis`)
 
@@ -127,6 +140,7 @@ struct SimulationResult {
     std::size_t completedTaskCount;
     SchedulingPolicy policy;
     std::size_t workerCount;
+    WorkflowSignature workflowSignature;
 };
 
 class Simulator {
@@ -138,7 +152,7 @@ public:
 };
 ```
 
-`Simulator::run` borrows the graph and analysis, owns all per-run state and its ready queue, and returns dispatch-ordered execution records. It rejects `workerCount == 0` with `std::invalid_argument`. A completed empty workflow has makespan zero and zero completed tasks. Metrics remain a separate module and can derive busy time from execution intervals.
+`Simulator::run` borrows the graph and analysis, owns all per-run state and its ready queue, and returns dispatch-ordered execution records plus the graph's exact canonical signature. It rejects `workerCount == 0` with `std::invalid_argument`. A completed empty workflow has makespan zero and zero completed tasks. Metrics remain a separate module and can derive busy time from execution intervals.
 
 Internal state consists of remaining indegrees, completion count, a min-priority queue of free worker IDs, and a min-priority queue of events `(finishTime, workerId, taskIndex)`. Events are ordered by finish time, then worker ID, then task ID. Worker allocation always uses the lowest available ID. Events at the same time are handled as one completion batch; the event tie order makes processing reproducible, while batching ensures dependents see the complete set of simultaneous completions before dispatch.
 
@@ -190,7 +204,7 @@ public:
 };
 ```
 
-`MetricsCalculator` borrows simulation results and returns metrics by value. It validates worker IDs, task uniqueness, execution intervals, per-worker overlap, completed count, and makespan consistency. Speedup requires one baseline worker and at least two workers in the compared result, matching policies, and matching task IDs/durations. Dependency-graph provenance cannot be confirmed from execution records alone, so supplying two runs of the same workflow is the caller's responsibility.
+`MetricsCalculator` borrows simulation results and returns metrics by value. It validates worker IDs, task uniqueness, execution intervals, per-worker overlap, completed count, and makespan consistency. Speedup requires one baseline worker and at least two workers in the compared result, matching policies, matching exact workflow signatures, and matching task IDs/durations. The signature stores all task IDs, durations, and dependency edges and compares those records directly, not through a hash. Different worker counts are valid for a comparison.
 
 - `makespan` is copied from `SimulationResult` (time units).
 - `totalBusyTime` is the checked sum of each `completionTime - startTime` (time units).

@@ -20,6 +20,7 @@ struct SimulationResult {
     std::size_t completedTaskCount;
     SchedulingPolicy policy;
     std::size_t workerCount;
+    WorkflowSignature workflowSignature;
 };
 
 class Simulator {
