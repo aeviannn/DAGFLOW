@@ -173,31 +173,32 @@ public:
         bool includeSpeedup);
 };
 
-struct Metrics {
-    Time totalWork;
+struct PerformanceMetrics {
     Time makespan;
-    double utilization;
+    Time totalBusyTime;
+    double workerUtilization;
+    double utilizationPercentage;
     double throughput;
-    std::optional<double> speedup;
 };
 
 class MetricsCalculator {
 public:
-    static Metrics calculate(
-        const WorkflowGraph& graph,
-        const ComparisonResult& comparison);
+    static PerformanceMetrics calculate(const SimulationResult& result);
+    static std::optional<double> speedup(
+        const SimulationResult& singleWorkerBaseline,
+        const SimulationResult& multiWorkerResult);
 };
 ```
 
-`ComparisonRunner` borrows the immutable graph and analysis and owns both returned results. It runs the selected policy with the requested worker count. If `includeSpeedup` is true, it also runs the same graph and policy with one worker; when the requested count is already one, it reuses that run as the baseline. `MetricsCalculator` borrows the graph and comparison and owns no data. It validates result vector sizes, policy equality, and that any baseline has one worker; a mismatch raises `std::invalid_argument`. Graph provenance is a caller contract: both runs in a `ComparisonResult` must come from the same graph and analysis.
+`MetricsCalculator` borrows simulation results and returns metrics by value. It validates worker IDs, task uniqueness, execution intervals, per-worker overlap, completed count, and makespan consistency. Speedup requires one baseline worker and at least two workers in the compared result, matching policies, and matching task IDs/durations. Dependency-graph provenance cannot be confirmed from execution records alone, so supplying two runs of the same workflow is the caller's responsibility.
 
-- `totalWork = sum(task durations)`.
-- `makespan = SimulationResult::makespan`.
-- `utilization = totalWork / (workerCount * makespan)`. It is `0` when makespan is zero.
-- `throughput = V / makespan` tasks per time unit. It is `0` when makespan is zero.
-- Optional `speedup = singleWorkerMakespan / parallelMakespan`. It is `std::nullopt` if no baseline was requested or either makespan is zero. Otherwise it is a finite positive ratio. For one worker with positive makespan, speedup is `1`.
+- `makespan` is copied from `SimulationResult` (time units).
+- `totalBusyTime` is the checked sum of each `completionTime - startTime` (time units).
+- `workerUtilization = totalBusyTime / (workerCount * makespan)`; percentage is that ratio times 100. Both are zero when makespan is zero.
+- `throughput = completedTaskCount / makespan` (tasks per time unit); it is zero when makespan is zero.
+- `speedup = singleWorkerMakespan / multiWorkerMakespan`; the helper returns `std::nullopt` if either makespan is zero.
 
-Sum durations with checked integer addition. Do not multiply `workerCount * makespan` in integer arithmetic; convert operands to `long double` before multiplication/division, then store the reported ratio as `double`. Metrics take `O(V + W)` time and `O(1)` extra space beyond the result vectors.
+Sum durations with checked integer addition. Do not multiply `workerCount * makespan` in integer arithmetic; convert operands to `long double` before multiplication/division, then store the reported ratio as `double`. Metrics validation and calculation take `O(V)` expected time and `O(V)` auxiliary space for task and worker consistency lookup.
 
 ### Input/output and executable (`input`, `output`, `main`)
 

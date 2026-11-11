@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(dagflow_graph
     src/graph_analysis.cpp
+    src/metrics.cpp
     src/scheduler.cpp
     src/simulator.cpp
     src/workflow_graph.cpp
@@ -46,3 +47,12 @@ else()
     target_compile_options(simulator_tests PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 add_test(NAME simulator_tests COMMAND simulator_tests)
+
+add_executable(metrics_tests tests/metrics_tests.cpp)
+target_link_libraries(metrics_tests PRIVATE dagflow_graph)
+if(MSVC)
+    target_compile_options(metrics_tests PRIVATE /W4)
+else()
+    target_compile_options(metrics_tests PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+add_test(NAME metrics_tests COMMAND metrics_tests)
