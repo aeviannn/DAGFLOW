@@ -47,6 +47,9 @@ include/dagflow/simulator.hpp
 include/dagflow/metrics.hpp
 include/dagflow/input.hpp       # only if a CLI/input format is agreed
 include/dagflow/output.hpp      # only if needed by the chosen interface
+app/main.cpp
+app/cli.cpp
+app/report.cpp
 src/...
 tests/...
 ```
@@ -227,6 +230,8 @@ void writeReport(std::ostream& output,
 ```
 
 The parser borrows the input stream and returns owned task specs; it raises `std::invalid_argument` for malformed content and `std::runtime_error` for stream failures. The reporter borrows its stream and result objects and does not retain references. `main` owns the streams, parsed specs, graph, analysis, comparison results, and metrics. No network, database, web service, or third-party framework is part of the design.
+
+The console application is implemented in `app/`: `main.cpp` only forwards standard streams, `cli.cpp` validates menu input and orchestrates core APIs, and `report.cpp` formats results and bounded-width Gantt timelines. Built-in examples remain in `examples/workflows.hpp`; console code does not enter the core library.
 
 ## Overflow and failure behavior
 

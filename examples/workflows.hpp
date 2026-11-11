@@ -2,6 +2,7 @@
 
 #include "dagflow/task.hpp"
 
+#include <string>
 #include <vector>
 
 namespace dagflow::examples {
@@ -16,6 +17,36 @@ inline std::vector<TaskSpec> forkAndJoin() {
 
 inline std::vector<TaskSpec> simultaneousAndZeroDuration() {
     return {{1, 2, {}}, {2, 2, {}}, {3, 0, {1, 2}}};
+}
+
+struct WorkflowPreset {
+    std::string name;
+    std::vector<TaskSpec> tasks;
+};
+
+inline std::vector<TaskSpec> softwareBuildPipeline() {
+    return {
+        {100, 2, {}},          // checkout source
+        {110, 1, {100}},       // configure build
+        {120, 3, {110}},       // generate sources
+        {130, 5, {120}},       // compile core library
+        {140, 4, {120}},       // compile application objects
+        {150, 4, {120}},       // compile test objects
+        {160, 2, {130, 140}},  // link application
+        {170, 2, {130, 150}},  // link test executable
+        {180, 4, {170}},       // run unit tests
+        {190, 1, {160, 180}}   // package release
+    };
+}
+
+inline std::vector<WorkflowPreset> presets() {
+    return {
+        {"Empty workflow", {}},
+        {"Simple dependency chain", chain()},
+        {"Fork-and-join workflow", forkAndJoin()},
+        {"Simultaneous completion", simultaneousAndZeroDuration()},
+        {"Software build pipeline", softwareBuildPipeline()}
+    };
 }
 
 } // namespace dagflow::examples

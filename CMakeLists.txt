@@ -56,3 +56,32 @@ else()
     target_compile_options(metrics_tests PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 add_test(NAME metrics_tests COMMAND metrics_tests)
+
+add_library(dagflow_console
+    app/cli.cpp
+    app/report.cpp
+)
+target_include_directories(dagflow_console PUBLIC app examples)
+target_link_libraries(dagflow_console PUBLIC dagflow_graph)
+if(MSVC)
+    target_compile_options(dagflow_console PRIVATE /W4)
+else()
+    target_compile_options(dagflow_console PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+add_executable(dagflow app/main.cpp)
+target_link_libraries(dagflow PRIVATE dagflow_console)
+if(MSVC)
+    target_compile_options(dagflow PRIVATE /W4)
+else()
+    target_compile_options(dagflow PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+add_executable(cli_tests tests/cli_tests.cpp)
+target_link_libraries(cli_tests PRIVATE dagflow_console)
+if(MSVC)
+    target_compile_options(cli_tests PRIVATE /W4)
+else()
+    target_compile_options(cli_tests PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+add_test(NAME cli_tests COMMAND cli_tests)
