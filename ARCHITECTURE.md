@@ -114,31 +114,31 @@ Each policy inserts and removes each task at most once. FCFS queue operations ar
 ### Discrete-event simulation (`simulator`)
 
 ```cpp
-struct TaskTiming {
-    Time start;
-    Time finish;
+struct TaskExecution {
+    TaskId taskId;
     std::size_t workerId;
+    Time startTime;
+    Time completionTime;
 };
 
 struct SimulationResult {
+    std::vector<TaskExecution> executions; // ordered by task dispatch
+    Time makespan;
+    std::size_t completedTaskCount;
     SchedulingPolicy policy;
     std::size_t workerCount;
-    Time makespan;
-    std::vector<TaskTiming> timings; // indexed by TaskIndex
-    std::vector<Time> workerBusyTime; // indexed by worker ID
 };
 
 class Simulator {
 public:
-    static SimulationResult run(
-        const WorkflowGraph& graph,
-        const GraphAnalysis& analysis,
-        SchedulingPolicy policy,
-        std::size_t workerCount); // workerCount must be positive
+    static SimulationResult run(const WorkflowGraph& graph,
+                                const GraphAnalysis& analysis,
+                                SchedulingPolicy policy,
+                                std::size_t workerCount); // workerCount must be positive
 };
 ```
 
-`Simulator::run` borrows the graph and analysis, owns all per-run state and its ready queue, and returns a result that owns its timing and busy-time vectors. It rejects `workerCount == 0` with `std::invalid_argument`. A completed empty workflow has makespan zero and zero busy time for every requested worker.
+`Simulator::run` borrows the graph and analysis, owns all per-run state and its ready queue, and returns dispatch-ordered execution records. It rejects `workerCount == 0` with `std::invalid_argument`. A completed empty workflow has makespan zero and zero completed tasks. Metrics remain a separate module and can derive busy time from execution intervals.
 
 Internal state consists of remaining indegrees, completion count, a min-priority queue of free worker IDs, and a min-priority queue of events `(finishTime, workerId, taskIndex)`. Events are ordered by finish time, then worker ID, then task ID. Worker allocation always uses the lowest available ID. Events at the same time are handled as one completion batch; the event tie order makes processing reproducible, while batching ensures dependents see the complete set of simultaneous completions before dispatch.
 
@@ -153,7 +153,7 @@ Internal state consists of remaining indegrees, completion count, a min-priority
 
 Zero-duration tasks create events at the current time. The algorithm processes them through the same event-batch path without advancing time. Each processed event completes one task, so same-time processing makes finite progress and cannot spin indefinitely. A zero-duration successor released by a completion can run and complete at that same timestamp. Simultaneous completions release dependencies as one batch before any new dispatch.
 
-The simulation processes at most `V` task completions and `E` dependency edges. Event and policy queues cost `O(log V)` per insertion/removal, giving `O((V + E) log V)` time and `O(V + W)` extra space.
+The simulation processes at most `V` task completions and `E` dependency edges. With a heapified initial worker-ID queue, the implementation costs `O(W + (V + E) log V + V log W)` time: worker initialization is `O(W)`, ready batches and events are `O((V + E) log V)`, and worker heap operations are `O(V log W)`. Extra space is `O(V + W)`.
 
 ### Metrics and optional speedup (`metrics`)
 
