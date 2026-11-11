@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(dagflow_graph
+    src/graph_analysis.cpp
     src/workflow_graph.cpp
 )
 target_include_directories(dagflow_graph PUBLIC include)

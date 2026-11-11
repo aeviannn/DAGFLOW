@@ -1,8 +1,10 @@
 #include "dagflow/workflow_graph.hpp"
+#include "dagflow/graph_analysis.hpp"
 #include "workflows.hpp"
 
 #include <functional>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -128,6 +130,111 @@ void testFailedConstructionDoesNotAffectExistingGraph() {
           "previously built graph remains usable after failed construction");
 }
 
+std::vector<dagflow::TaskId> taskIdsIn(const dagflow::WorkflowGraph& graph,
+                                       const std::vector<dagflow::TaskIndex>& order) {
+    std::vector<dagflow::TaskId> ids;
+    for (const auto index : order) {
+        ids.push_back(graph.task(index).id);
+    }
+    return ids;
+}
+
+void testAnalysisEmptyGraph() {
+    const auto graph = dagflow::WorkflowGraph::fromSpecs({});
+    const auto analysis = dagflow::analyze(graph);
+    check(analysis.topologicalOrder.empty(), "empty graph has empty topological order");
+    check(analysis.bottomLevel.empty(), "empty graph has no bottom levels");
+    check(analysis.criticalPathLength == 0, "empty graph critical path is zero");
+}
+
+void testAnalysisChain() {
+    const auto graph = dagflow::WorkflowGraph::fromSpecs(dagflow::examples::chain());
+    const auto analysis = dagflow::analyze(graph);
+    check(taskIdsIn(graph, analysis.topologicalOrder) ==
+              std::vector<dagflow::TaskId>({1, 2, 3}),
+          "chain has deterministic topological order");
+    check(analysis.bottomLevel[graph.indexOf(1)] == 6, "chain root bottom level is 6");
+    check(analysis.bottomLevel[graph.indexOf(2)] == 4, "chain middle bottom level is 4");
+    check(analysis.bottomLevel[graph.indexOf(3)] == 1, "chain sink bottom level is 1");
+    check(analysis.criticalPathLength == 6, "chain critical path is 6");
+}
+
+void testAnalysisForkJoin() {
+    const auto graph = dagflow::WorkflowGraph::fromSpecs(dagflow::examples::forkAndJoin());
+    const auto analysis = dagflow::analyze(graph);
+    const auto order = taskIdsIn(graph, analysis.topologicalOrder);
+    check(order == std::vector<dagflow::TaskId>({1, 2, 3}),
+          "fork/join topological order respects dependencies");
+    check(analysis.bottomLevel[graph.indexOf(1)] == 6, "fork left branch bottom level is 6");
+    check(analysis.bottomLevel[graph.indexOf(2)] == 7, "fork right branch bottom level is 7");
+    check(analysis.bottomLevel[graph.indexOf(3)] == 4, "join bottom level is its duration");
+    check(analysis.criticalPathLength == 7, "fork/join global path is maximum bottom level");
+}
+
+void testAnalysisDisconnected() {
+    const auto graph = dagflow::WorkflowGraph::fromSpecs(
+        {{40, 1, {}}, {20, 3, {10}}, {10, 2, {}}, {99, 0, {}}});
+    const auto analysis = dagflow::analyze(graph);
+    const auto ids = taskIdsIn(graph, analysis.topologicalOrder);
+    check(ids == std::vector<dagflow::TaskId>({10, 20, 40, 99}),
+          "disconnected graph uses smallest available task ID");
+    check(analysis.bottomLevel[graph.indexOf(10)] == 5,
+          "longer disconnected component has bottom level 5");
+    check(analysis.bottomLevel[graph.indexOf(40)] == 1,
+          "shorter disconnected component has bottom level 1");
+    check(analysis.criticalPathLength == 5,
+          "global path is maximum over disconnected components");
+}
+
+void testAnalysisMultipleValidOrdersAndTieBreaking() {
+    const auto graph = dagflow::WorkflowGraph::fromSpecs(
+        {{30, 2, {}}, {10, 2, {}}, {20, 2, {}}});
+    const auto analysis = dagflow::analyze(graph);
+    check(taskIdsIn(graph, analysis.topologicalOrder) ==
+              std::vector<dagflow::TaskId>({10, 20, 30}),
+          "equal-duration independent tasks break ties by ID");
+}
+
+void testAnalysisCycles() {
+    const auto graph = dagflow::WorkflowGraph::fromSpecs({{1, 1, {2}}, {2, 1, {1}}});
+    try {
+        (void)dagflow::analyze(graph);
+        check(false, "multi-task cycle throws CycleError");
+    } catch (const dagflow::CycleError& error) {
+        check(std::string(error.what()).find("cycle") != std::string::npos,
+              "cycle error message clearly identifies cycle");
+    } catch (...) {
+        check(false, "multi-task cycle throws the documented exception type");
+    }
+}
+
+void testAnalysisZeroDurations() {
+    const auto graph = dagflow::WorkflowGraph::fromSpecs({{1, 0, {}}, {2, 0, {1}}});
+    const auto analysis = dagflow::analyze(graph);
+    check(analysis.bottomLevel[graph.indexOf(1)] == 0,
+          "zero-duration chain root bottom level is zero");
+    check(analysis.bottomLevel[graph.indexOf(2)] == 0,
+          "zero-duration chain sink bottom level is zero");
+    check(analysis.criticalPathLength == 0, "all-zero workflow path length is zero");
+}
+
+void testAnalysisLargeDuration() {
+    const auto largest = std::numeric_limits<dagflow::Time>::max();
+    const auto graph = dagflow::WorkflowGraph::fromSpecs({{1, largest, {}}});
+    const auto analysis = dagflow::analyze(graph);
+    check(analysis.bottomLevel[graph.indexOf(1)] == largest,
+          "maximum representable task duration is handled without overflow");
+    check(analysis.criticalPathLength == largest,
+          "maximum representable critical path is retained");
+}
+
+void testAnalysisCheckedOverflow() {
+    const auto largest = std::numeric_limits<dagflow::Time>::max();
+    const auto graph = dagflow::WorkflowGraph::fromSpecs({{1, largest, {}}, {2, 1, {1}}});
+    checkThrows<std::overflow_error>([&graph] { (void)dagflow::analyze(graph); },
+                                     "bottom-level addition detects overflow");
+}
+
 } // namespace
 
 int main() {
@@ -143,6 +250,15 @@ int main() {
     testMissingTaskLookup();
     testIndexBounds();
     testFailedConstructionDoesNotAffectExistingGraph();
+    testAnalysisEmptyGraph();
+    testAnalysisChain();
+    testAnalysisForkJoin();
+    testAnalysisDisconnected();
+    testAnalysisMultipleValidOrdersAndTieBreaking();
+    testAnalysisCycles();
+    testAnalysisZeroDurations();
+    testAnalysisLargeDuration();
+    testAnalysisCheckedOverflow();
 
     if (failures != 0) {
         std::cerr << checks - failures << " passed, " << failures
