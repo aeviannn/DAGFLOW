@@ -147,3 +147,12 @@ npm.cmd run test:api
 ```
 
 These tests exercise the local HTTP API and therefore need permission to bind and connect to a loopback port in restricted shells.
+
+Run the Chromium browser tests with:
+
+```powershell
+npx.cmd playwright install chromium --only-shell
+npm.cmd run test:e2e
+```
+
+Playwright starts the Express bridge and Vite development server when they are not already running. The browser suite covers workflow selection, simulation requests, configuration invalidation, overlapping requests, policy comparison, empty workflows, and recoverable API and engine errors. These tests also require loopback access.

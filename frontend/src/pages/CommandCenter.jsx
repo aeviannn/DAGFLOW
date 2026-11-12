@@ -11,7 +11,8 @@ const policyNames = { fcfs: 'FCFS', sjf: 'SJF', cpf: 'Critical Path First' };
 export default function CommandCenter({ workflows, workflow, setWorkflow, workers, setWorkers,
                                        policy, setPolicy, simulation, busy, error, onRun, onClearError }) {
   const selectedWorkflow = workflows.find((item) => item.id === workflow);
-  const current = simulation?.workflow?.id === workflow ? simulation : null;
+  const current = simulation?.workflow?.id === workflow &&
+    simulation?.worker_count === workers && simulation?.policy === policy ? simulation : null;
   const resultLabel = useMemo(() => current && `${policyNames[current.policy]} · ${current.worker_count} workers`, [current]);
 
   return (

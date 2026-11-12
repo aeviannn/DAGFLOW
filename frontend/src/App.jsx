@@ -12,6 +12,9 @@ export default function App() {
   const [workers, setWorkers] = useState(4);
   const [policy, setPolicy] = useState('cpf');
   const state = useSimulation();
+  const updateWorkflow = (value) => { state.invalidate(); setWorkflow(value); };
+  const updateWorkers = (value) => { state.invalidate(); setWorkers(value); };
+  const updatePolicy = (value) => { state.invalidate(); setPolicy(value); };
   const onRun = async () => {
     try { await state.run({ workflow, workers, policy }); } catch { /* The shared error state is rendered below. */ }
   };
@@ -29,11 +32,11 @@ export default function App() {
       <div className="content-container">
         {state.status === 'error' && <div className="connection-error"><div className="connection-symbol">!</div><div><strong>Can’t reach the DAGFlow engine</strong><p>{state.error}. Start the local Express bridge and refresh this page.</p></div>
           <button onClick={() => window.location.reload()}>Retry <ArrowUpRight size={14} /></button></div>}
-        {page === 'command' && <CommandCenter workflows={state.workflows} workflow={workflow} setWorkflow={setWorkflow} workers={workers} setWorkers={setWorkers} policy={policy} setPolicy={setPolicy}
+        {page === 'command' && <CommandCenter workflows={state.workflows} workflow={workflow} setWorkflow={updateWorkflow} workers={workers} setWorkers={updateWorkers} policy={policy} setPolicy={updatePolicy}
           simulation={state.simulation} busy={state.busy} error={state.status === 'ready' ? state.error : ''} onRun={onRun} onClearError={() => state.setError('')} />}
-        {page === 'comparison' && <PolicyComparison workflows={state.workflows} workflow={workflow} setWorkflow={setWorkflow} workers={workers} setWorkers={setWorkers}
+        {page === 'comparison' && <PolicyComparison workflows={state.workflows} workflow={workflow} setWorkflow={updateWorkflow} workers={workers} setWorkers={updateWorkers}
           comparison={state.comparison} busy={state.busy} error={state.error} onCompare={onCompare} onClearError={() => state.setError('')} />}
-        {page === 'workflows' && <WorkflowLibrary workflows={state.workflows} onOpen={(id) => { setWorkflow(id); setPage('command'); }} />}
+        {page === 'workflows' && <WorkflowLibrary workflows={state.workflows} onOpen={(id) => { updateWorkflow(id); setPage('command'); }} />}
         <footer className="app-footer"><span>Built around deterministic scheduling.</span><span>Powered by the C++17 DAGFlow engine</span></footer>
       </div>
     </main>
