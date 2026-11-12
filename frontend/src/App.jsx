@@ -33,7 +33,7 @@ export default function App() {
         {state.status === 'error' && <div className="connection-error"><div className="connection-symbol">!</div><div><strong>Can’t reach the DAGFlow engine</strong><p>{state.error}. Start the local Express bridge and refresh this page.</p></div>
           <button onClick={() => window.location.reload()}>Retry <ArrowUpRight size={14} /></button></div>}
         {page === 'command' && <CommandCenter workflows={state.workflows} workflow={workflow} setWorkflow={updateWorkflow} workers={workers} setWorkers={updateWorkers} policy={policy} setPolicy={updatePolicy}
-          simulation={state.simulation} busy={state.busy} error={state.status === 'ready' ? state.error : ''} onRun={onRun} onClearError={() => state.setError('')} />}
+          simulation={state.simulation} comparison={state.comparison} busy={state.busy} error={state.status === 'ready' ? state.error : ''} onRun={onRun} onClearError={() => state.setError('')} />}
         {page === 'comparison' && <PolicyComparison workflows={state.workflows} workflow={workflow} setWorkflow={updateWorkflow} workers={workers} setWorkers={updateWorkers}
           comparison={state.comparison} busy={state.busy} error={state.error} onCompare={onCompare} onClearError={() => state.setError('')} />}
         {page === 'workflows' && <WorkflowLibrary workflows={state.workflows} onOpen={(id) => { updateWorkflow(id); setPage('command'); }} />}

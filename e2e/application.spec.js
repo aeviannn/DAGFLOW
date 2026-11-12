@@ -109,6 +109,23 @@ test('Policy Comparison shows three engine results and invalidates them when set
   await expect(cards).toHaveCount(0);
 });
 
+test('Execution Insights incorporates a matching policy comparison without replacing the simulation', async ({ page }) => {
+  await page.getByLabel('Workflow', { exact: true }).selectOption('fork-join');
+  await page.getByLabel('Scheduling policy').selectOption('fcfs');
+  await page.getByRole('button', { name: 'Run simulation' }).click();
+  await expect(page.getByRole('heading', { name: 'Execution Insights' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Policy Comparison' }).click();
+  await page.getByRole('button', { name: 'Compare policies' }).click();
+  await expect(page.locator('.policy-card')).toHaveCount(3);
+
+  await page.getByRole('button', { name: 'Command Center' }).click();
+  await expect(page.getByText('Simulation complete')).toBeVisible();
+  await expect(page.locator('.critical-task-table tbody tr')).toHaveCount(2);
+  await expect(page.locator('.execution-observations')).toContainText('FCFS, SJF, and Critical Path First tie at 7 time units');
+  await expect(page.locator('.execution-observations')).toContainText('measured speedup 1.29×');
+});
+
 test('empty workflow and invalid worker input are handled safely', async ({ page }) => {
   await page.getByRole('button', { name: 'Policy Comparison' }).click();
   const workerInput = page.getByLabel('Custom worker count');

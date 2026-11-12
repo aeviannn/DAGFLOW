@@ -4,12 +4,13 @@ import PageHeader from '../components/PageHeader.jsx';
 import SimulationControls from '../components/SimulationControls.jsx';
 import DependencyGraph from '../components/DependencyGraph.jsx';
 import GanttTimeline from '../components/GanttTimeline.jsx';
+import ExecutionInsights from '../components/ExecutionInsights.jsx';
 import { MetricCard } from '../components/MetricCard.jsx';
 
 const policyNames = { fcfs: 'FCFS', sjf: 'SJF', cpf: 'Critical Path First' };
 
 export default function CommandCenter({ workflows, workflow, setWorkflow, workers, setWorkers,
-                                       policy, setPolicy, simulation, busy, error, onRun, onClearError }) {
+                                       policy, setPolicy, simulation, comparison, busy, error, onRun, onClearError }) {
   const selectedWorkflow = workflows.find((item) => item.id === workflow);
   const current = simulation?.workflow?.id === workflow &&
     simulation?.worker_count === workers && simulation?.policy === policy ? simulation : null;
@@ -35,6 +36,7 @@ export default function CommandCenter({ workflows, workflow, setWorkflow, worker
         </div>
         <DependencyGraph analysis={current.analysis} selectedWorkflow={selectedWorkflow} />
         <GanttTimeline simulation={current} />
+        <ExecutionInsights simulation={current} comparison={comparison} />
       </> : <>
         <div className="welcome-panel surface">
           <div className="welcome-art"><div className="art-node art-node-a">01</div><div className="art-node art-node-b">02</div><div className="art-node art-node-c">03</div><div className="art-link art-link-a" /><div className="art-link art-link-b" /><div className="art-spark"><Sparkles size={18} /></div></div>

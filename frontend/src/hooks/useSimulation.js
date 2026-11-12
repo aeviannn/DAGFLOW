@@ -39,7 +39,9 @@ export function useSimulation() {
     setBusy(true);
     setError('');
     setSimulation(null);
-    setComparison(null);
+    if (comparison?.workflow?.id !== settings.workflow || comparison?.worker_count !== settings.workers) {
+      setComparison(null);
+    }
     try {
       const result = await api.simulate(settings);
       if (requestId !== requestSequence.current) return null;
@@ -51,13 +53,15 @@ export function useSimulation() {
     } finally {
       if (requestId === requestSequence.current) setBusy(false);
     }
-  }, []);
+  }, [comparison]);
 
   const compare = useCallback(async ({ workflow, workers }) => {
     const requestId = ++requestSequence.current;
     setBusy(true);
     setError('');
-    setSimulation(null);
+    if (simulation?.workflow?.id !== workflow || simulation?.worker_count !== workers) {
+      setSimulation(null);
+    }
     setComparison(null);
     try {
       const result = await api.compare({ workflow, workers });
@@ -70,7 +74,7 @@ export function useSimulation() {
     } finally {
       if (requestId === requestSequence.current) setBusy(false);
     }
-  }, []);
+  }, [simulation]);
 
   return { workflows, status, error, setError, simulation, comparison, busy, run, compare, invalidate };
 }

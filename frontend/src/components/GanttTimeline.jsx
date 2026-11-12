@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Activity, Clock3 } from 'lucide-react';
+import { getPeakConcurrency } from '../services/executionInsights.js';
 
 const colors = ['#8d77de', '#46a99b', '#d59a52', '#5d91c9', '#c7789c', '#78a96d', '#a47bc4'];
 const chartWidth = 900;
@@ -7,22 +8,11 @@ const left = 86;
 const right = 18;
 const plotWidth = chartWidth - left - right;
 
-function peakConcurrency(executions) {
-  const events = executions.flatMap((entry) => entry.duration > 0
-    ? [{ time: entry.start_time, delta: 1 }, { time: entry.completion_time, delta: -1 }]
-    : []);
-  events.sort((a, b) => a.time - b.time || a.delta - b.delta);
-  let active = 0;
-  let peak = 0;
-  for (const event of events) { active += event.delta; peak = Math.max(peak, active); }
-  return peak;
-}
-
 export default function GanttTimeline({ simulation }) {
   const executions = simulation?.executions ?? [];
   const workers = simulation?.worker_count ?? 0;
   const makespan = simulation?.metrics?.makespan ?? 0;
-  const peakWorkers = peakConcurrency(executions);
+  const peakWorkers = getPeakConcurrency(executions);
   const scaleEnd = makespan > 0 ? makespan : 1;
   const chartHeight = 60 + workers * 50;
   const ticks = useMemo(() => Array.from({ length: 6 }, (_, index) => ({ value: makespan * index / 5, x: left + plotWidth * index / 5 })), [makespan]);

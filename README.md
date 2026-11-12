@@ -138,7 +138,7 @@ npm.cmd run dev:ui
 
 Open `http://127.0.0.1:5173`. Vite proxies `/api` to Express on `127.0.0.1:4174`. The bridge defaults to `build/dagflow.exe`; set `DAGFLOW_ENGINE_PATH` before starting the bridge if your executable is elsewhere. The API binds only to loopback. For a production-style local preview, run `npm.cmd run build` and then `npm.cmd run dev:api`; Express serves `frontend/dist` and the API from port 4174.
 
-API routes are `GET /api/health`, `GET /api/workflows`, `POST /api/simulate`, and `POST /api/compare`. Simulation requests contain `workflow`, `workers`, and `policy`; comparison requests contain `workflow` and `workers`. Workflow IDs are fetched from the C++ catalog. The Gantt chart and dependency graph use the engine's returned task and execution records.
+API routes are `GET /api/health`, `GET /api/workflows`, `POST /api/simulate`, and `POST /api/compare`. Simulation requests contain `workflow`, `workers`, and `policy`; comparison requests contain `workflow` and `workers`. Workflow IDs are fetched from the C++ catalog. The Gantt chart, dependency graph, and Execution Insights use the engine's returned task analysis, metrics, and execution records. Frontend insights reuse the C++ critical-path results and do not recalculate graph analysis.
 
 Run the Node bridge integration tests against the built C++ executable with:
 
@@ -147,6 +147,12 @@ npm.cmd run test:api
 ```
 
 These tests exercise the local HTTP API and therefore need permission to bind and connect to a loopback port in restricted shells.
+
+Run unit tests for the frontend's insight derivations with:
+
+```powershell
+npm.cmd run test:insights
+```
 
 Run the Chromium browser tests with:
 
